@@ -1,0 +1,15 @@
+Saved
+DerivedDataCache
+.vscode
+Intermediate
+.DS_store
+Build
+MPTest.code-workspace
+
+Binaries/*
+Plugins/*/Binaries/*
+Plugins/**/Binaries/*
+
+Intermediate/*
+Plugins/*/Intermediate/*
+Plugins/**/Intermediate/*
