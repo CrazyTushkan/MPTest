@@ -76,10 +76,12 @@ private:
 	FOnCreateSessionCompleteDelegate CreateSessionComplete;
 	FOnDestroySessionCompleteDelegate RecreateSessionAfterDestroy;
 	FOnFindSessionsCompleteDelegate FindSessionsComplete;
+	FOnJoinSessionCompleteDelegate JoinSessionComplete;
 
 	FDelegateHandle RecreateSessionAfterDestroyHandle;
 	FDelegateHandle CreateSessionCompleteHandle;
 	FDelegateHandle FindSessionsCompleteHandle;
+	FDelegateHandle JoinSessionCompleteHandle;
 
 	TSharedPtr<FOnlineSessionSearch> SessionSearch;
 
@@ -88,5 +90,6 @@ private:
 	void OnRecreateSessionAfterDestroy(FName SessionName, bool bDestroyWasSuccessful);
 	void OnCreateSessionComplete(FName SessionName, bool bWasSuccessful);
 	void OnFindSessionsComplete(bool bWasSuccessful);
+	void OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
 };
 

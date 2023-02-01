@@ -18,7 +18,8 @@
 AMPTestCharacter::AMPTestCharacter():
 	CreateSessionComplete(FOnCreateSessionCompleteDelegate::CreateUObject(this, &ThisClass::OnCreateSessionComplete)),
 	RecreateSessionAfterDestroy(FOnDestroySessionCompleteDelegate::CreateUObject(this, &ThisClass::OnRecreateSessionAfterDestroy)),
-	FindSessionsComplete(FOnFindSessionsCompleteDelegate::CreateUObject(this, &ThisClass::OnFindSessionsComplete))
+	FindSessionsComplete(FOnFindSessionsCompleteDelegate::CreateUObject(this, &ThisClass::OnFindSessionsComplete)),
+	JoinSessionComplete(FOnJoinSessionCompleteDelegate::CreateUObject(this, &ThisClass::OnJoinSessionComplete))
 {
 
 	// Set size for collision capsule
@@ -103,19 +104,55 @@ void AMPTestCharacter::OnCreateSessionComplete(FName SessionName, bool bWasSucce
 		bWasSuccessful ? EScreenLogLevel::INFO : EScreenLogLevel::CRITICAL,
 		TEXT("Session %s created: %d"), *SessionName.ToString(), bWasSuccessful);
 
+	if (bWasSuccessful) {
+		UWorld* World = GetWorld();
+		if (World) {
+			World->ServerTravel(FString("/Game/ThirdPerson/Maps/Lobby?listen"));
+		}
 	}
 }
 
 void AMPTestCharacter::OnFindSessionsComplete(bool bWasSuccessful)
 {
-	for (auto Result : SessionSearch->SearchResults) {
-		FString Id = Result.GetSessionIdStr();
-		FString User = Result.Session.OwningUserName;
+	if (this->IsSessionInterfaceValid()) {
+		SessionInterface->ClearOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteHandle);
 
-		if (GEngine) {
-			GEngine->AddOnScreenDebugMessage(
-				-1, 15.f, FColor::Blue, FString::Printf(TEXT("Id: %s, User: %s"), *Id, *User));
-		}	}
+		for (auto Result : SessionSearch->SearchResults) {
+			FString Id = Result.GetSessionIdStr();
+			FString User = Result.Session.OwningUserName;
+
+			FString MatchType;
+			Result.Session.SessionSettings.Get(FName("MatchType"), MatchType);
+
+			if (MatchType == FString("FreeForAll")) {
+				OnScreenLogger::ScreenLogInfo(TEXT("Id: %s, User: %s"), *Id, *User);
+				const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
+
+				JoinSessionCompleteHandle = SessionInterface->AddOnJoinSessionCompleteDelegate_Handle(JoinSessionComplete);
+				SessionInterface->JoinSession(*LocalPlayer->GetPreferredUniqueNetId(), NAME_GameSession, Result);
+
+				return;
+			}
+		}
+	}
+}
+
+void AMPTestCharacter::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result)
+{
+	if (this->IsSessionInterfaceValid()) {
+		SessionInterface->ClearOnJoinSessionCompleteDelegate_Handle(JoinSessionCompleteHandle);
+
+		FString Address;
+		if (SessionInterface->GetResolvedConnectString(NAME_GameSession, Address)) {
+			OnScreenLogger::ScreenLogInfo(TEXT("Address: %s"), *Address);
+
+			APlayerController* PlayerController = GetGameInstance()->GetFirstLocalPlayerController();
+			if (PlayerController) {
+				PlayerController->ClientTravel(Address, ETravelType::TRAVEL_Absolute);
+			}
+		}
+	}
+
 }
 
 void AMPTestCharacter::OnRecreateSessionAfterDestroy(FName SessionName, bool bDestroyWasSuccessful)
@@ -148,6 +185,8 @@ void AMPTestCharacter::CreateSession()
 		SessionSettings->bShouldAdvertise = true;
 		SessionSettings->bUsesPresence = true;
 		SessionSettings->bUseLobbiesIfAvailable = true;
+
+		SessionSettings->Set(FName("MatchType"), FString("FreeForAll"), EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 
 		const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
 
@@ -234,3 +273,4 @@ bool AMPTestCharacter::IsSessionInterfaceValid() {
 
 	return false;
 }
+
