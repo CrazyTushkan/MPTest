@@ -10,6 +10,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "OnlineSubsystem.h"
 #include "OnlineSessionSettings.h"
+#include "OnScreenLogger.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AMPTestCharacter
@@ -62,10 +63,7 @@ AMPTestCharacter::AMPTestCharacter():
 	if (OnlineSubsystem) {
 		SessionInterface = OnlineSubsystem->GetSessionInterface();
 
-		if (GEngine) {
-			GEngine->AddOnScreenDebugMessage(
-				-1, 15.f, FColor::Blue, FString::Printf(TEXT("Found subsystem %s"), *OnlineSubsystem->GetSubsystemName().ToString()));
-		}
+		OnScreenLogger::ScreenLogInfo(TEXT("Found subsystem %s"), *OnlineSubsystem->GetSubsystemName().ToString());
 	}
 }
 
@@ -101,9 +99,10 @@ void AMPTestCharacter::OnCreateSessionComplete(FName SessionName, bool bWasSucce
 		SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteHandle);
 	}
 
-	if (GEngine) {
-		GEngine->AddOnScreenDebugMessage(
-			-1, 15.f, bWasSuccessful ? FColor::Blue : FColor::Red, FString::Printf(TEXT("Session %s created: %d"), *SessionName.ToString(), bWasSuccessful));
+	OnScreenLogger::ScreenLog(
+		bWasSuccessful ? EScreenLogLevel::INFO : EScreenLogLevel::CRITICAL,
+		TEXT("Session %s created: %d"), *SessionName.ToString(), bWasSuccessful);
+
 	}
 }
 
